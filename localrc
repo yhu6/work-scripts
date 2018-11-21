@@ -1,0 +1,6 @@
+# tbuilder localrc
+MYUNAME=yhu6
+PROJECT=starlingx
+HOST_PREFIX=$HOME/starlingx/workspace
+HOST_MIRROR_DIR=$HOME/starlingx/mirror
+
