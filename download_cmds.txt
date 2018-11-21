@@ -1,0 +1,31 @@
+# These commands will run in the downloader/builder container
+# which is CentOS with appropriate network/proxy setting for
+# both shell and /etc/yum.conf. Moreover in /etc/yum.repos.d/
+# CentOS repos (such as, StarlingX-Centos-7.5.repo, StarlingX-Centos-7.4.repo)
+# and other 3rd party repos are already configured.
+
+# =======================================================================
+# download Binary RPM
+# sudo -E yumdownloader -q -C <rpm_pkg_name>, for example
+sudo -E yumdownloader -q -C syslog-ng-libdbi
+
+# download SRPM
+# sudo -E yumdownloader -q -C --source <srpm_pkg_name>, for example
+sudo -E yumdownloader -q -C --source ighttpd
+
+# download tarball without commit id
+	# wget -t 5 --wait=15 $url -O $download_path, for example,
+	wget -t 5 https://github.com/openstack/openstack-helm/archive/9d72fe1a501bc609a875eebf7b6274e18600ed70.tar.gz -O openstack-helm-9d72fe1a501bc609a875eebf7b6274e18600ed70.tar.gz
+
+	# make directory_name WITHOUT commit hd5 id
+	mkdir -p $directory_name
+
+	# uncompress the tarball to the directory_name
+	# tarball_name itself including commit HD5 id
+	
+	tar xf $tarball_name --strip-components 1 -C $directory_name
+
+	# zip the directory into the tarball
+	# tar -czf $tarball_name $directory_name
+
+	# by now, the new tarball is made
