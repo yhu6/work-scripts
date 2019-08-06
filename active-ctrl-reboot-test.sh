@@ -17,11 +17,12 @@ check_pod_status() {
     while IFS= read -r line; do
         # tr -s ' ' remove many spaces but leave one
         pod_name=`echo $line | tr -s ' ' | awk '{print $1}'`
+        pod_ready=`echo $line | tr -s ' ' | awk '{print $2}'`
         pod_state=`echo $line | tr -s ' ' | awk '{print $3}'`
         #echo "pod $pod_name is $pod_state"
-        if [[ $pod_state != "Running" ]]; then
+        if [ [ $pod_state != "Running" ] -o [ $pod_ready != "1/1" ] ]; then
             # it means "return 1"
-            echo "not_running"
+            echo $line
             break
         fi
         # while ... done
@@ -42,8 +43,8 @@ host_name=`hostname`
 echo "my name is $host_name"
 while true; do
     rc=`check_pod_status "keystone-api"`
+    kubectl -n openstack get pods | grep "keystone-api"
     if [[ x$rc == x"not_running" ]]; then
-        kubectl -n openstack get pods | grep "keystone-api"
         sleep 10
         # not all running, so recheck after 10s
     else
@@ -88,6 +89,5 @@ fi
 
 if [[ x$test_ready == x"ready" ]]; then
 	echo "ready to kick the testing - restart the active controller"
-	sleep 5
-	#sudo init 6
+	sudo init 6
 fi
