@@ -20,7 +20,7 @@ check_pod_status() {
         pod_ready=`echo $line | tr -s ' ' | awk '{print $2}'`
         pod_state=`echo $line | tr -s ' ' | awk '{print $3}'`
         #echo "pod $pod_name is $pod_state"
-        if [ [ $pod_state != "Running" ] -o [ $pod_ready != "1/1" ] ]; then
+        if [ $pod_state != "Running" ] || [ $pod_ready != "1/1" ] ; then
             # it means "return 1"
             echo $line
             break
