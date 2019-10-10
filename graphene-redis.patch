@@ -1,0 +1,92 @@
+diff --git a/LibOS/shim/test/apps b/LibOS/shim/test/apps
+deleted file mode 160000
+index dc4464c..0000000
+--- a/LibOS/shim/test/apps
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit dc4464ce0f6d48d966df7a20f33289c2a655325b
+diff --git a/LibOS/shim/test/apps b/LibOS/shim/test/apps
+new file mode 120000
+index 0000000..bf8263d
+--- /dev/null
++++ b/LibOS/shim/test/apps
+@@ -0,0 +1 @@
++graphene-tests
+\ No newline at end of file
+diff --git a/Pal/src/host/Linux-SGX/signer/pal-sgx-sign b/Pal/src/host/Linux-SGX/signer/pal-sgx-sign
+index 5071cd6..00b114b 100755
+--- a/Pal/src/host/Linux-SGX/signer/pal-sgx-sign
++++ b/Pal/src/host/Linux-SGX/signer/pal-sgx-sign
+@@ -19,8 +19,8 @@ ARCHITECTURE = "amd64"
+ 
+ SSAFRAMESIZE = PAGESIZE
+ 
+-DEFAULT_ENCLAVE_SIZE = '256M'
+-DEFAULT_THREAD_NUM = 4
++DEFAULT_ENCLAVE_SIZE = '1024M'
++DEFAULT_THREAD_NUM = 8
+ enclave_heap_min = DEFAULT_HEAP_MIN
+ 
+ """ Utilities """
+diff --git a/Tools/gsce b/Tools/gsce
+index 78f6d5d..4e11671 100755
+--- a/Tools/gsce
++++ b/Tools/gsce
+@@ -14,6 +14,17 @@ def gen_dockerfile( image_name, app_name, bin_name, proj_dir):
+   df.write('FROM '+ image_name + '\n')
+   df.write('\n')
+ 
++  # if there are proxies, write them into /etc/apt/apt.conf
++  http_proxy = os.environ['http_proxy']
++  https_proxy = os.environ['https_proxy']
++  if http_proxy and https_proxy:
++    df.write('# add proxies for apt \n')
++    df.write('RUN touch /etc/apt/apt.conf && \\\n')
++    df.write('  echo Acquire::http::proxy ' + http_proxy + '; > /etc/apt/apt.conf && \\\n')
++    df.write('  echo Acquire::https::proxy '+ https_proxy + '; >> /etc/apt/apt.conf \n')
++    # for debug purpose
++    df.write('RUN cat /etc/apt/apt.conf \n')
++
+   # SWITCH to ROOT
+   df.write('# SWITCH to root\n')
+   df.write('USER root\n\n')
+@@ -25,6 +36,9 @@ def gen_dockerfile( image_name, app_name, bin_name, proj_dir):
+   df.write('RUN pip install protobuf && \\\n')
+   df.write('    pip install pycrypto\n')
+ 
++  df.write('RUN apt-get update && \\\n')
++  df.write('    apt-get install -y python-protobuf libprotobuf-c-dev protobuf-c-compiler vim\n')
++
+   df.write('# Temporal fixes for Dependencies Issue #1: libcrypto.so.1.0.0 and libssl.so.1.0.0 have different locations\n')
+   if not os.path.isfile('/lib/x86_64-linux-gnu/libcrypto.so.1.0.0'):
+     df.write('RUN ln -s /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0 /lib/x86_64-linux-gnu/libcrypto.so.1.0.0 \\\n')
+@@ -40,9 +54,10 @@ def gen_dockerfile( image_name, app_name, bin_name, proj_dir):
+ 
+   # COPY system files
+   df.write('# Copy system files\n')
+-  df.write('COPY Runtime/* ' + proj_dir + '/Runtime/\n')
++  df.write('COPY Runtime-hard/* ' + proj_dir + '/Runtime/\n')
+   df.write('COPY Pal/src/Makefile.Host ' + proj_dir + '/Pal/src/Makefile.Host\n')
+   df.write('COPY Pal/src/host/Linux-SGX/signer/* ' + proj_dir + '/Pal/src/host/Linux-SGX/signer/\n')
++  df.write('COPY ./Pal/src/host/Linux-SGX/generated_offsets.py ' + proj_dir + '/Pal/src/host/Linux-SGX/signer/\n')
+ 
+   # COPY tools for building app instance
+   df.write('# Copy tools for building app instance\n')
+@@ -112,7 +127,7 @@ if __name__ == '__main__':
+ 
+   match = re.match(r'\[([^\s]*)\s*(.*)\]', res)
+   bin_name = match.group(1)
+-  bin_cmd = ''
++  bin_cmd = "--save '' --protected-mode no"
+   if match.group(2):
+     bin_cmd = match.group(2)
+ 
+@@ -130,7 +145,7 @@ if __name__ == '__main__':
+ 
+   # STEP 3: Building new docker image with generated Dockerfile
+   os.chdir('..')
+-  os.system('sudo docker build -f Tools/build/Dockerfile.' + app_name + ' -t gsc_' + app_name + ' .\n')
++  os.system('sudo -E docker build --build-arg http_proxy --build-arg https_proxy -f Tools/build/Dockerfile.' + app_name + ' -t gsc_' + app_name + ' .\n')
+ 
+   # STEP 4: Run GSC with the target app
+   os.system('sudo docker run -i -t' + docker_str +' --device=/dev/gsgx --device=/dev/isgx ' +
